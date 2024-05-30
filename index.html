@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link
+			href="https://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css"
+			rel="stylesheet"
+		/>
+		<link
+			href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="styles.css" />
+		<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+		<title>Techatronics Chat App</title>
+		<style type="text/css">
+			.usernameForm {
+				margin-right: auto;
+				margin-left: auto;
+				padding-right: 15px;
+				padding-left: 15px;
+				width: 100%;
+			}
+
+			@media (min-width: 576px) {
+				.usernameForm {
+					max-width: 540px;
+				}
+			}
+
+			@media (min-width: 768px) {
+				.usernameForm {
+					max-width: 720px;
+				}
+			}
+
+			@media (min-width: 992px) {
+				.usernameForm {
+					max-width: 960px;
+				}
+			}
+
+			@media (min-width: 1200px) {
+				.usernameForm {
+					max-width: 1140px;
+				}
+			}
+
+			.card-columns .card {
+				margin-bottom: 0.75rem;
+			}
+
+			@media (min-width: 576px) {
+				.card-columns {
+					column-count: 3;
+					column-gap: 1.25rem;
+				}
+
+				.card-columns .card {
+					display: inline-block;
+					width: 100%;
+				}
+			}
+
+			.text-muted {
+				color: var(--main-color) !important;
+			}
+
+			p {
+				margin-top: 0;
+				margin-bottom: 1rem;
+			}
+
+			.mb-3 {
+				margin-bottom: 1rem !important;
+			}
+
+			.input-group {
+				position: relative;
+				display: flex;
+				width: 100%;
+			}
+			.row {
+				justify-content: center;
+			}
+		</style>
+	</head>
+
+	<body>
+		<!-------------------------------------------------- new login --------------------------------------------------->
+		<div class="usernameForm" id="usernameForm">
+			<div class="row justify-content-center">
+				<div class="col-md-8">
+					<div class="card-group mb-0">
+						<div
+							class="card text-white bg-primary py-5 d-md-down-none"
+							style="width: 44%"
+						>
+							<div class="card-body text-center">
+								<div>
+									<h2>Welcome</h2>
+									<p>TechatronicsChatApp <i class="fa fa-comment"></i></p>
+								</div>
+							</div>
+						</div>
+						<div class="card p-4">
+							<div class="card-body">
+								<p class="text-muted">Create a username</p>
+								<form id="usernameForm">
+									<div class="input-group mb-3">
+										<span class="input-group-addon"
+											><i class="fa fa-user"></i
+										></span>
+										<input
+											type="text"
+											class="form-control"
+											id="usernameInput"
+											placeholder="Username"
+										/>
+									</div>
+									<div class="row">
+										<div class="col-6">
+											<button type="submit" class="btn btn-primary px-4">
+												Join Chat
+											</button>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-------------------------------------------------- new login End --------------------------------------------------->
+
+		<div id="chatWindow" style="display: none">
+			<ul id="messages"></ul>
+			<div class="messageSend">
+				<input id="messageInput" autocomplete="off" /><button id="sendButton">
+					Send
+				</button>
+			</div>
+		</div>
+
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+		<script src="https://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js"></script>
+		<script>
+			const socket = io();
+			const usernameForm = document.getElementById("usernameForm");
+			const chatWindow = document.getElementById("chatWindow");
+			const messageInput = document.getElementById("messageInput");
+			const sendButton = document.getElementById("sendButton");
+			const messages = document.getElementById("messages");
+			let username = "";
+			let currentUser = "";
+
+			usernameForm.addEventListener("submit", (event) => {
+				event.preventDefault();
+				Swal.fire({
+					title: "Welcome to our chat app",
+					text: "",
+					color: "#000000",
+					icon: "success",
+					confirmButtonColor: "var(--main-color)",
+					iconColor: "var(--main-color)",
+					confirmButtonText: "Okay",
+				}).then((result) => {
+                    const enteredUsername = document
+                        .getElementById("usernameInput")
+                        .value.trim();
+                    if (enteredUsername !== "") {
+                        usernameForm.style.display = "none";
+                        chatWindow.style.display = "block";
+                        currentUser = enteredUsername;
+                        username = enteredUsername;
+                        socket.emit("user joined", username);
+                    }
+				});
+			});
+
+			sendButton.addEventListener("click", () => {
+				sendMessage();
+			});
+
+			messageInput.addEventListener("keypress", (event) => {
+				if (event.keyCode === 13) {
+					sendMessage();
+				}
+			});
+
+			function sendMessage() {
+				const message = messageInput.value.trim();
+				if (message !== "") {
+					socket.emit("chat message", { username, message });
+					messageInput.value = "";
+				}
+			}
+
+			socket.on("connect", () => {
+				console.log("Connected to server");
+			});
+
+			socket.on("user joined", (receivedUsername) => {
+				console.log(`${receivedUsername} joined the chat`);
+				const userJoinedMessage = document.createElement("div");
+				userJoinedMessage.className = "user-joined-message";
+				userJoinedMessage.textContent = `${receivedUsername} joined the chat`;
+				messages.appendChild(userJoinedMessage);
+			});
+
+			socket.on("chat message", (data) => {
+				const { username, message } = data;
+				const currentTime = new Date();
+				const hours = currentTime.getHours();
+				const minutes = currentTime.getMinutes();
+				const formattedTime = `${hours}:${minutes < 10 ? "0" : ""}${minutes}`;
+				if (username === "System") {
+					const systemMessage = document.createElement("div");
+					systemMessage.className = "user-joined-message";
+					systemMessage.textContent = message;
+					messages.appendChild(systemMessage);
+				} else {
+					const messageWrapper = document.createElement("div");
+					messageWrapper.className = "message-wrapper";
+					const messageContainer = document.createElement("div");
+					messageContainer.className = "message-container";
+
+					const isOwnMessage = username === currentUser;
+
+					if (isOwnMessage) {
+						messageContainer.classList.add("own-message");
+					}
+
+					const usernameElement = document.createElement("div");
+					usernameElement.className = "username";
+					usernameElement.textContent = username;
+
+					const messageElement = document.createElement("div");
+					messageElement.className = "message";
+					messageElement.textContent = message;
+
+					messageContainer.appendChild(usernameElement);
+					messageContainer.appendChild(messageElement);
+
+					const timeSentElement = document.createElement("div");
+					timeSentElement.className = "time-sent";
+					timeSentElement.textContent = formattedTime;
+
+					messageContainer.appendChild(usernameElement);
+					messageContainer.appendChild(messageElement);
+					messageContainer.appendChild(timeSentElement);
+
+					messageWrapper.appendChild(messageContainer);
+
+					messages.appendChild(messageWrapper);
+					messages.scrollTop = messages.scrollHeight;
+				}
+			});
+		</script>
+	</body>
+</html>
